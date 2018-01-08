@@ -13,6 +13,6 @@ let () =
   let exts = Exts.(cmx @ library @ exts [".cmi" ; ".cmt" ]) in
   Ok [
     Pkg.lib ~exts "lib/awa" ;
-    Pkg.test "test/test";
-    Pkg.test ~run:false "test/awa_test_server"
+    Pkg.test "lib/test/test";
+    Pkg.test ~run:false "lib/test/awa_test_server"
   ]

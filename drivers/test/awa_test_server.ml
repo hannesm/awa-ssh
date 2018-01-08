@@ -69,9 +69,9 @@ let bc t id data =
 let rec serve t cmd =
   Driver.poll t >>= fun (t, poll_result) ->
   match poll_result with
-  | Server.Disconnected s -> ok (printf "Disconnected: %s\n%!" s)
-  | Server.Channel_eof id -> ok (printf "Channel %ld EOF\n%!" id)
-  | Server.Channel_data (id, data) ->
+  | Awa.Server.Disconnected s -> ok (printf "Disconnected: %s\n%!" s)
+  | Awa.Server.Channel_eof id -> ok (printf "Channel %ld EOF\n%!" id)
+  | Awa.Server.Channel_data (id, data) ->
     (match cmd with
      | None -> serve t cmd
      | Some "echo" ->
@@ -81,7 +81,7 @@ let rec serve t cmd =
          echo t id data >>= fun t -> serve t cmd
      | Some "bc" -> bc t id data >>= fun t -> serve t cmd
      | _ -> error "Unexpected cmd")
-  | Server.Channel_exec (id, exec) -> match exec with
+  | Awa.Server.Channel_exec (id, exec) -> match exec with
     | "suicide" -> Driver.disconnect t >>= fun _ -> ok ()
     | "ping" ->
       Driver.send_channel_data t id (Cstruct.of_string "pong\n") >>= fun t ->
@@ -108,7 +108,7 @@ let rec wait_connection rsa listen_fd server_port =
   printf "Awa server waiting connections on port %d\n%!" server_port;
   let client_fd, _ = Unix.(accept listen_fd) in
   printf "Client connected !\n%!";
-  let server, msgs = Server.make rsa user_db in
+  let server, msgs = Awa.Server.make rsa user_db in
   Driver.of_server server msgs
     (write_cstruct client_fd)
     (read_cstruct client_fd)

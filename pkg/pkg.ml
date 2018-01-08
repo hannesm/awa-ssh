@@ -12,7 +12,10 @@ let () =
   Pkg.describe ~opams "awa" @@ fun c ->
   let exts = Exts.(cmx @ library @ exts [".cmi" ; ".cmt" ]) in
   Ok [
+    (* Awa library *)
     Pkg.lib ~exts "lib/awa" ;
     Pkg.test "lib/test/test";
-    Pkg.test ~run:false "lib/test/awa_test_server"
+    (* Drivers *)
+    Pkg.lib ~exts "drivers/driver";
+    Pkg.test ~run:false "drivers/test/awa_test_server"
   ]

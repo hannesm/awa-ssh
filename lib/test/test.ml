@@ -553,7 +553,7 @@ let t_openssh_client () =
   let s1 = "Georg Wilhelm Friedrich Hegel" in
   let s2 = "Karl Marx" in
   let ossh_cmd = "ssh -p 18022 awa@127.0.0.1 -i keys/awa_test_rsa echo" in
-  let awa_cmd = "./_build/lib/test/awa_test_server.native" in
+  let awa_cmd = "./_build/drivers/test/awa_test_server.native" in
   let awa_args = Array.of_list [] in
   let null = Unix.openfile "/dev/null" [ Unix.O_RDWR ] 0o666 in
   ignore @@ Unix.system "pkill awa_test_server";

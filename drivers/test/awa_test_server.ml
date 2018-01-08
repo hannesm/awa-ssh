@@ -17,7 +17,6 @@
 let () = Printexc.record_backtrace true
 
 open Rresult.R
-open Awa
 
 let printf = Printf.printf
 let sprintf = Printf.sprintf
@@ -68,12 +67,11 @@ let bc t id data =
   Driver.send_channel_data t id (Cstruct.of_string reply)
 
 let rec serve t cmd =
-  let open Server in
   Driver.poll t >>= fun (t, poll_result) ->
   match poll_result with
-  | Disconnected s -> ok (printf "Disconnected: %s\n%!" s)
-  | Channel_eof id -> ok (printf "Channel %ld EOF\n%!" id)
-  | Channel_data (id, data) ->
+  | Server.Disconnected s -> ok (printf "Disconnected: %s\n%!" s)
+  | Server.Channel_eof id -> ok (printf "Channel %ld EOF\n%!" id)
+  | Server.Channel_data (id, data) ->
     (match cmd with
      | None -> serve t cmd
      | Some "echo" ->
@@ -83,7 +81,7 @@ let rec serve t cmd =
          echo t id data >>= fun t -> serve t cmd
      | Some "bc" -> bc t id data >>= fun t -> serve t cmd
      | _ -> error "Unexpected cmd")
-  | Channel_exec (id, exec) -> match exec with
+  | Server.Channel_exec (id, exec) -> match exec with
     | "suicide" -> Driver.disconnect t >>= fun _ -> ok ()
     | "ping" ->
       Driver.send_channel_data t id (Cstruct.of_string "pong\n") >>= fun t ->

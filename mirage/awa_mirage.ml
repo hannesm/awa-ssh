@@ -37,6 +37,9 @@ module Make (F : Mirage_flow.S) (M : Mirage_clock.MCLOCK) = struct
         | Ok () -> write_flow t d)
       (Ok ()) bufs
 
+  let now () =
+    Mtime.of_uint64_ns (M.elapsed_ns ())
+
   let read_react t =
     match t.state with
     | `Eof | `Error _ -> Lwt.return (Error ())
@@ -47,7 +50,7 @@ module Make (F : Mirage_flow.S) (M : Mirage_clock.MCLOCK) = struct
       | Ok (`Data data) ->
         match t.state with
         | `Active ssh ->
-          begin match Awa.Client.incoming ssh (Mtime.of_uint64_ns (M.elapsed_ns ())) data with
+          begin match Awa.Client.incoming ssh (now ()) data with
             | Error msg -> t.state <- `Error (`Msg msg) ; Lwt.return (Error ())
             | Ok (ssh', out, events) ->
               let state' = if List.mem `Disconnected events then `Eof else `Active ssh' in
@@ -228,7 +231,7 @@ module Make (F : Mirage_flow.S) (M : Mirage_clock.MCLOCK) = struct
       >>= fun nexus_msg ->
       (match nexus_msg with
        | Rekey ->
-         (match Awa.Server.maybe_rekey server (Mtime_clock.now ()) with
+         (match Awa.Server.maybe_rekey server (now ()) with
           | None -> nexus t fd server input_buffer
           | Some (server, kexinit) ->
             send_msg fd server kexinit
@@ -243,7 +246,7 @@ module Make (F : Mirage_flow.S) (M : Mirage_clock.MCLOCK) = struct
          send_msgs fd server msgs >>= fun server ->
          nexus t fd server input_buffer)
     | Some msg -> (* SSH msg *)
-      wrapr (Awa.Server.input_msg server msg (Mtime_clock.now ()))
+      wrapr (Awa.Server.input_msg server msg (now ()))
       >>= fun (server, replies, event) ->
       send_msgs fd server replies
       >>= fun server ->

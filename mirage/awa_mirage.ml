@@ -174,12 +174,14 @@ module Make (F : Mirage_flow.S) (M : Mirage_clock.MCLOCK) = struct
     | Ok x -> Lwt.return x
     | Error e -> Lwt.fail_invalid_arg e
 
-  let send_msg t server msg =
+  let send_msg flow server msg =
     wrapr (Awa.Server.output_msg server msg)
     >>= fun (server, msg_buf) ->
-    FLOW.write t.flow msg_buf >>= function
+    FLOW.write flow msg_buf >>= function
       | Ok () -> Lwt.return server
-      | Error w -> t.state <- `Error (`Write w) ; Lwt.return server
+      | Error w ->
+        Logs.err (fun m -> m "error %a while writing" FLOW.pp_write_error w);
+        Lwt.return server
 
   let rec send_msgs fd server = function
     | msg :: msgs ->
@@ -188,18 +190,21 @@ module Make (F : Mirage_flow.S) (M : Mirage_clock.MCLOCK) = struct
       send_msgs fd server msgs
     | [] -> Lwt.return server
 
-  let net_read t =
+  let net_read flow =
     let lwtbuf = Bytes.create 4096 in (* XXX revise *)
-    FLOW.read t.flow >>= function
-      | Error e -> t.state <- `Error (`Read e) ; Lwt.return Net_eof
-      | Ok `Eof -> t.state <- `Eof ; Lwt.return Net_eof
-      | Ok (`Data data) ->
-        let n = Cstruct.length data in
-        assert (n >= 0); (* handle exception ! ! *)
-        let () = assert (n > 0) in          (* XXX *)
-        let buf = Cstruct.create n in
-        Cstruct.blit_from_bytes lwtbuf 0 buf 0 n;
-        Lwt.return (Net_io buf)
+    FLOW.read flow >>= function
+    | Error e ->
+      Logs.err (fun m -> m "read error %a" FLOW.pp_error e);
+      Lwt.return Net_eof
+    | Ok `Eof ->
+      Lwt.return Net_eof
+    | Ok (`Data data) ->
+      let n = Cstruct.length data in
+      assert (n >= 0); (* handle exception ! ! *)
+      let () = assert (n > 0) in          (* XXX *)
+      let buf = Cstruct.create n in
+      Cstruct.blit_from_bytes lwtbuf 0 buf 0 n;
+      Lwt.return (Net_io buf)
 
   let sshin_eof c =
     Lwt_mvar.put c.sshin_mbox `Eof
